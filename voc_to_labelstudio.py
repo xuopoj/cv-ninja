@@ -12,7 +12,8 @@ def parse_voc_xml(xml_path):
     tree = ET.parse(xml_path)
     root = tree.getroot()
 
-    filename = root.find('filename').text
+    # Use actual XML filename instead of reading from XML content
+    filename = Path(xml_path).stem + '.jpg'
     size = root.find('size')
     width = int(size.find('width').text)
     height = int(size.find('height').text)
