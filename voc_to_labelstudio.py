@@ -58,9 +58,15 @@ def convert_voc_to_labelstudio(voc_dir, output_path, prefix=''):
     for xml_file in sorted(voc_path.glob('*.xml')):
         filename, width, height, annotations = parse_voc_xml(xml_file)
 
+        # Extract unique labels for column display
+        labels = []
+        if annotations:
+            labels = list(set(ann['value']['rectanglelabels'][0] for ann in annotations))
+
         task = {
             'data': {
-                'image': f'{prefix}{filename}'
+                'image': f'{prefix}{filename}',
+                'label': ', '.join(labels) if labels else ''
             }
         }
 
