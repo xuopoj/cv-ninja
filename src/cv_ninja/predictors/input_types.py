@@ -31,15 +31,8 @@ class Prediction(BasePrediction):
     Used for programmatic API calls with basic metadata.
     """
 
-    model_name: str
-    confidence_threshold: float = 0.5
-
     def validate(self) -> bool:
         """Validate prediction."""
-        if not self.model_name:
-            raise ValueError("model_name is required")
-        if not 0.0 <= self.confidence_threshold <= 1.0:
-            raise ValueError("confidence_threshold must be between 0 and 1")
         return True
 
 
@@ -52,8 +45,6 @@ class ImagePrediction(BasePrediction):
     """
 
     image_path: str
-    model_name: str
-    confidence_threshold: float = 0.5
     output_format: str = "labelstudio"
 
     def validate(self) -> bool:
@@ -65,10 +56,6 @@ class ImagePrediction(BasePrediction):
             raise ValueError(f"Path is not a file: {self.image_path}")
         if path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".bmp", ".gif"}:
             raise ValueError(f"Unsupported image format: {path.suffix}")
-        if not self.model_name:
-            raise ValueError("model_name is required")
-        if not 0.0 <= self.confidence_threshold <= 1.0:
-            raise ValueError("confidence_threshold must be between 0 and 1")
         return True
 
 
@@ -81,9 +68,7 @@ class Base64ImagePrediction(BasePrediction):
     """
 
     image_data: str
-    model_name: str
     image_format: str = "jpeg"
-    confidence_threshold: float = 0.5
     output_format: str = "labelstudio"
 
     def validate(self) -> bool:
@@ -92,10 +77,6 @@ class Base64ImagePrediction(BasePrediction):
             raise ValueError("image_data is required")
         if self.image_format.lower() not in {"jpeg", "jpg", "png", "bmp", "gif"}:
             raise ValueError(f"Unsupported image format: {self.image_format}")
-        if not self.model_name:
-            raise ValueError("model_name is required")
-        if not 0.0 <= self.confidence_threshold <= 1.0:
-            raise ValueError("confidence_threshold must be between 0 and 1")
         try:
             base64.b64decode(self.image_data, validate=True)
         except Exception as e:
@@ -120,8 +101,6 @@ class URLImagePrediction(BasePrediction):
     """
 
     image_url: str
-    model_name: str
-    confidence_threshold: float = 0.5
     output_format: str = "labelstudio"
     download_image: bool = False
 
@@ -131,10 +110,6 @@ class URLImagePrediction(BasePrediction):
             raise ValueError("image_url is required")
         if not self.image_url.startswith(("http://", "https://")):
             raise ValueError("image_url must be a valid HTTP/HTTPS URL")
-        if not self.model_name:
-            raise ValueError("model_name is required")
-        if not 0.0 <= self.confidence_threshold <= 1.0:
-            raise ValueError("confidence_threshold must be between 0 and 1")
         return True
 
 
@@ -147,8 +122,6 @@ class BatchImagePrediction(BasePrediction):
     """
 
     image_dir: str
-    model_name: str
-    confidence_threshold: float = 0.5
     output_format: str = "labelstudio"
     recursive: bool = False
     supported_extensions: List[str] = field(default_factory=lambda: [".jpg", ".jpeg", ".png", ".bmp", ".gif"])
@@ -160,10 +133,6 @@ class BatchImagePrediction(BasePrediction):
             raise FileNotFoundError(f"Directory not found: {self.image_dir}")
         if not path.is_dir():
             raise ValueError(f"Path is not a directory: {self.image_dir}")
-        if not self.model_name:
-            raise ValueError("model_name is required")
-        if not 0.0 <= self.confidence_threshold <= 1.0:
-            raise ValueError("confidence_threshold must be between 0 and 1")
         return True
 
     def get_images(self) -> List[Path]:

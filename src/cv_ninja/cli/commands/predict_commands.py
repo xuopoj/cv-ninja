@@ -7,7 +7,6 @@ from pathlib import Path
 from cv_ninja.predictors.base import FormDataPredictor, BinaryPredictor
 from cv_ninja.predictors.auth import APIKeyAuth, IAMTokenAuth
 from cv_ninja.predictors.config import PredictionConfig
-from cv_ninja.predictors.formats import FormDataFormatConverter, BinaryFormatConverter
 from cv_ninja.predictors.tiling import ImageTiler
 from cv_ninja.predictors.input_types import BatchImagePrediction, ImagePrediction
 from cv_ninja.predictors.output_formatter import PredictionOutputFormatter
@@ -74,13 +73,6 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     "-u",
     "--api-url",
     help="Prediction API endpoint URL (or set PREDICTION_API_URL in .env)",
-)
-@click.option(
-    "-c",
-    "--confidence",
-    default=0.5,
-    type=float,
-    help="Confidence threshold (0-1, default: 0.5)",
 )
 @click.option(
     "-o",
@@ -167,6 +159,11 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     help="Path to YAML config file (default: cv-ninja.yaml or endpoints.yaml)",
 )
 @click.option(
+    "--prefix",
+    default="",
+    help="URL prefix for image paths in Label Studio format (e.g., /data/local-files/?d=)",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -175,7 +172,6 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
 def predict_image(
     image_path,
     api_url,
-    confidence,
     output,
     output_format,
     api_key,
@@ -193,6 +189,7 @@ def predict_image(
     env_file,
     profile,
     config_file,
+    prefix,
     verbose,
 ):
     """Predict objects in a single image using external API.
@@ -238,14 +235,11 @@ def predict_image(
         if verbose:
             click.echo(f"Predicting objects in: {image_path}")
             click.echo(f"API URL: {api_url}")
-            click.echo(f"Confidence threshold: {confidence}")
             click.echo(f"Output format: {output_format}")
 
         # Validate input
         prediction = ImagePrediction(
             image_path=image_path,
-            model_name="default",
-            confidence_threshold=confidence,
             output_format=output_format,
         )
         prediction.validate()
@@ -289,9 +283,8 @@ def predict_image(
                 click.echo("Sending request to API...")
                 click.echo(f"Using binary upload mode (endpoint: {endpoint})")
 
-            # Create predictor (slim, no tiling logic)
+            # Create predictor (has built-in converter, returns COCO)
             client = BinaryPredictor(api_url, auth_handler, endpoint=endpoint)
-            converter = BinaryFormatConverter()
 
             # Check if tiling is needed
             img = Image.open(image_path)
@@ -300,19 +293,18 @@ def predict_image(
             if tile and tiler.needs_tiling(img):
                 if verbose:
                     click.echo(f"Image requires tiling: {img.size[0]}x{img.size[1]}")
-                # Use tiler to orchestrate prediction
-                result = tiler.predict_tiled(client, converter, img, params=query_params)
+                # Use tiler to orchestrate prediction (returns COCO)
+                result = tiler.predict_tiled(client, img, params=query_params)
             else:
-                # Direct prediction without tiling
+                # Direct prediction (returns COCO)
                 result = client.predict_from_file(image_path, params=query_params)
         else:
             if verbose:
                 click.echo("Sending request to API...")
                 click.echo("Using form-data upload mode")
 
-            # Create predictor (slim, no tiling logic)
+            # Create predictor (has built-in converter, returns COCO)
             client = FormDataPredictor(api_url, auth_handler)
-            converter = FormDataFormatConverter()
 
             # Check if tiling is needed
             img = Image.open(image_path)
@@ -321,11 +313,11 @@ def predict_image(
             if tile and tiler.needs_tiling(img):
                 if verbose:
                     click.echo(f"Image requires tiling: {img.size[0]}x{img.size[1]}")
-                # Use tiler to orchestrate prediction
-                result = tiler.predict_tiled(client, converter, img, model_name="default", confidence_threshold=confidence)
+                # Use tiler to orchestrate prediction (returns COCO)
+                result = tiler.predict_tiled(client, img)
             else:
-                # Direct prediction without tiling
-                result = client.predict_from_file(image_path, "default", confidence)
+                # Direct prediction (returns COCO)
+                result = client.predict_from_file(image_path)
 
         print(f"[DEBUG] CLI received result: {result}")
         print(f"[DEBUG] Result type: {type(result)}")
@@ -334,7 +326,7 @@ def predict_image(
         formatter = PredictionOutputFormatter()
 
         if output_format == "labelstudio":
-            formatted = formatter.to_labelstudio(result)
+            formatted = formatter.to_labelstudio(result, prefix=prefix)
             print(f"[DEBUG] Formatted for LabelStudio: {formatted}")
             with open(output, "w") as f:
                 json.dump(formatted, f, indent=2)
@@ -363,8 +355,8 @@ def predict_image(
 
         if verbose:
             click.echo(f"Output saved to: {output}")
-            if result.get("detections"):
-                click.echo(f"Found {len(result['detections'])} objects")
+            if result.get("annotations"):
+                click.echo(f"Found {len(result['annotations'])} objects")
 
     except ValidationError as e:
         click.echo(click.style(f"✗ Validation error: {e}", fg="red"), err=True)
@@ -385,13 +377,6 @@ def predict_image(
     "-u",
     "--api-url",
     help="Prediction API endpoint URL (or set PREDICTION_API_URL in .env)",
-)
-@click.option(
-    "-c",
-    "--confidence",
-    default=0.5,
-    type=float,
-    help="Confidence threshold (0-1, default: 0.5)",
 )
 @click.option(
     "-o",
@@ -484,6 +469,11 @@ def predict_image(
     help="Path to YAML config file (default: cv-ninja.yaml or endpoints.yaml)",
 )
 @click.option(
+    "--prefix",
+    default="",
+    help="URL prefix for image paths in Label Studio format (e.g., /data/local-files/?d=)",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -492,7 +482,6 @@ def predict_image(
 def predict_batch(
     image_dir,
     api_url,
-    confidence,
     output,
     output_format,
     recursive,
@@ -511,6 +500,7 @@ def predict_batch(
     env_file,
     profile,
     config_file,
+    prefix,
     verbose,
 ):
     """Predict objects in all images in a directory using external API.
@@ -553,15 +543,12 @@ def predict_batch(
         if verbose:
             click.echo(f"Batch predicting in: {image_dir}")
             click.echo(f"API URL: {api_url}")
-            click.echo(f"Confidence threshold: {confidence}")
             click.echo(f"Output format: {output_format}")
             click.echo(f"Recursive: {recursive}")
 
         # Validate input
         prediction = BatchImagePrediction(
             image_dir=image_dir,
-            model_name="default",
-            confidence_threshold=confidence,
             output_format=output_format,
             recursive=recursive,
         )
@@ -611,13 +598,11 @@ def predict_batch(
             except json.JSONDecodeError as e:
                 raise click.UsageError(f"Invalid JSON in --params: {e}")
 
-        # Create appropriate predictor based on mode (slim, no tiling)
+        # Create appropriate predictor based on mode (has built-in converter, returns COCO)
         if use_binary:
             client = BinaryPredictor(api_url, auth_handler, endpoint=endpoint)
-            converter = BinaryFormatConverter()
         else:
             client = FormDataPredictor(api_url, auth_handler)
-            converter = FormDataFormatConverter()
 
         # Create tiler if tiling is enabled
         tiler = ImageTiler(tile_size=(tile_width, tile_height), overlap=tile_overlap) if tile else None
@@ -637,22 +622,22 @@ def predict_batch(
             if tile and tiler and tiler.needs_tiling(img):
                 if verbose:
                     click.echo(f"  Image requires tiling: {img.size[0]}x{img.size[1]}")
-                # Use tiler to orchestrate prediction
+                # Use tiler to orchestrate prediction (returns COCO)
                 if use_binary:
-                    result = tiler.predict_tiled(client, converter, img, params=query_params)
+                    result = tiler.predict_tiled(client, img, params=query_params)
                 else:
-                    result = tiler.predict_tiled(client, converter, img, model_name="default", confidence_threshold=confidence)
+                    result = tiler.predict_tiled(client, img)
             else:
-                # Direct prediction without tiling
+                # Direct prediction (returns COCO)
                 if use_binary:
                     result = client.predict_from_file(str(image_path), params=query_params)
                 else:
-                    result = client.predict_from_file(str(image_path), "default", confidence)
+                    result = client.predict_from_file(str(image_path))
 
             result["image_name"] = image_path.name
 
             if output_format == "labelstudio":
-                formatted = formatter.to_labelstudio(result)
+                formatted = formatter.to_labelstudio(result, prefix=prefix)
                 all_results.append(formatted)
             elif output_format == "voc":
                 # For VOC, save individual XML files

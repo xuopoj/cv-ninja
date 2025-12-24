@@ -24,16 +24,12 @@ class HTTPRequestParser:
            {
                "image_data": "base64_string",
                "image_format": "jpeg",
-               "model_name": "yolov8n",
-               "confidence_threshold": 0.5,
                "output_format": "labelstudio"
            }
 
         2. Image URL reference:
            {
                "image_url": "https://example.com/image.jpg",
-               "model_name": "yolov8n",
-               "confidence_threshold": 0.5,
                "output_format": "labelstudio"
            }
 
@@ -50,15 +46,11 @@ class HTTPRequestParser:
             return Base64ImagePrediction(
                 image_data=payload["image_data"],
                 image_format=payload.get("image_format", "jpeg"),
-                model_name=payload["model_name"],
-                confidence_threshold=payload.get("confidence_threshold", 0.5),
                 output_format=payload.get("output_format", "labelstudio"),
             )
         elif "image_url" in payload:
             return URLImagePrediction(
                 image_url=payload["image_url"],
-                model_name=payload["model_name"],
-                confidence_threshold=payload.get("confidence_threshold", 0.5),
                 output_format=payload.get("output_format", "labelstudio"),
             )
         else:
@@ -71,8 +63,6 @@ class HTTPRequestParser:
         """Parse multipart form data request.
 
         Form fields:
-        - model_name (required)
-        - confidence_threshold (optional, default 0.5)
         - output_format (optional, default 'labelstudio')
 
         Files:
@@ -98,8 +88,6 @@ class HTTPRequestParser:
 
         return ImagePrediction(
             image_path=str(temp_path),
-            model_name=form_data["model_name"],
-            confidence_threshold=float(form_data.get("confidence_threshold", 0.5)),
             output_format=form_data.get("output_format", "labelstudio"),
         )
 
@@ -123,13 +111,11 @@ class HTTPResponseFormatter:
         Returns:
             JSON-serializable response dict with fields:
                 - success: bool
-                - model: str
                 - predictions: Formatted annotations
                 - metadata: Image/result metadata
         """
         return {
             "success": True,
-            "model": predictions.get("model_name"),
             "predictions": predictions.get("detections", []),
             "metadata": {
                 "image_width": predictions.get("image_width"),

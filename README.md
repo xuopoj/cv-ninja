@@ -242,7 +242,6 @@ cv-ninja predict batch ./images -v
 
 **通用参数：**
 - `-u, --api-url`: API 端点 URL
-- `-c, --confidence`: 置信度阈值（0-1，默认 0.5）
 - `-o, --output`: 输出文件路径
 - `-f, --format`: 输出格式（labelstudio/voc/coco）
 - `-v, --verbose`: 详细输出
@@ -331,8 +330,7 @@ client = FormDataPredictor(
 
 # 单张图片推理
 result = client.predict_from_file(
-    image_path="path/to/image.jpg",
-    confidence_threshold=0.5
+    image_path="path/to/image.jpg"
 )
 
 print(result)
@@ -410,14 +408,11 @@ img = Image.open("large_image.jpg")
 if tiler.needs_tiling(img):
     result = tiler.predict_tiled(
         predictor,
-        converter,
-        img,
-        model_name="default",
-        confidence_threshold=0.5
+        img
     )
 else:
     # 直接预测小图
-    result = predictor.predict_from_file("large_image.jpg", "default", 0.5)
+    result = predictor.predict_from_file("large_image.jpg")
 
 # 结果会自动合并
 print(f"Total detections: {result['total_detections']}")

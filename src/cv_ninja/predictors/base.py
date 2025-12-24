@@ -98,16 +98,12 @@ class FormDataPredictor(PredictionClient):
     def predict_from_file(
         self,
         image_path: str,
-        model_name: str = "default",
-        confidence_threshold: float = 0.5,
         **kwargs
     ) -> Dict[str, Any]:
         """Send image file to API as multipart form data.
 
         Args:
             image_path: Path to image file
-            model_name: Model identifier to use
-            confidence_threshold: Confidence threshold for predictions
             **kwargs: Additional API-specific form fields
 
         Returns:
@@ -126,8 +122,6 @@ class FormDataPredictor(PredictionClient):
 
         result = self._make_request(
             image_data=image_data,
-            model_name=model_name,
-            confidence_threshold=confidence_threshold,
             image_width=width,
             image_height=height,
             **kwargs
@@ -135,14 +129,12 @@ class FormDataPredictor(PredictionClient):
 
         # Convert to COCO format if converter is set
         if self.converter:
-            return self.converter.to_coco(result, image_id=1, file_name=image_path)
+            return self.converter.to_coco(result, image_id=1, file_name=Path(image_path).name)
         return result
 
     def predict_from_bytes(
         self,
         image_data: bytes,
-        model_name: str = "default",
-        confidence_threshold: float = 0.5,
         image_id: int = 1,
         **kwargs
     ) -> Dict[str, Any]:
@@ -150,8 +142,6 @@ class FormDataPredictor(PredictionClient):
 
         Args:
             image_data: Image bytes
-            model_name: Model identifier to use
-            confidence_threshold: Confidence threshold for predictions
             image_id: Image ID for COCO format (used when converter is set)
             **kwargs: Additional API-specific form fields
 
@@ -167,8 +157,6 @@ class FormDataPredictor(PredictionClient):
 
         result = self._make_request(
             image_data=image_data,
-            model_name=model_name,
-            confidence_threshold=confidence_threshold,
             image_width=width,
             image_height=height,
             **kwargs
@@ -182,8 +170,6 @@ class FormDataPredictor(PredictionClient):
     def _make_request(
         self,
         image_data: bytes,
-        model_name: str,
-        confidence_threshold: float,
         image_width: int,
         image_height: int,
         **kwargs
@@ -192,8 +178,6 @@ class FormDataPredictor(PredictionClient):
 
         Args:
             image_data: Image bytes
-            model_name: Model identifier
-            confidence_threshold: Confidence threshold
             image_width: Image width in pixels
             image_height: Image height in pixels
             **kwargs: Additional form fields
@@ -210,8 +194,6 @@ class FormDataPredictor(PredictionClient):
         }
 
         data = {
-            'model': model_name,
-            'confidence': confidence_threshold,
             **kwargs
         }
 
@@ -227,8 +209,7 @@ class FormDataPredictor(PredictionClient):
         #         }
         #     ],
         #     'image_width': image_width,
-        #     'image_height': image_height,
-        #     'model_name': model_name
+        #     'image_height': image_height
         # }
         # return debug_result
         headers = self._get_auth_headers()
@@ -254,8 +235,6 @@ class FormDataPredictor(PredictionClient):
             result['image_width'] = image_width
         if 'image_height' not in result:
             result['image_height'] = image_height
-        if 'model_name' not in result:
-            result['model_name'] = model_name
 
         return result
 
@@ -274,8 +253,7 @@ class BinaryPredictor(PredictionClient):
         self,
         api_url: str,
         auth_handler: Optional[AuthHandler] = None,
-        endpoint: str = "/upload",
-        converter: Optional[FormatConverter] = None
+        endpoint: str = "/upload"
     ):
         """Initialize binary predictor.
 
@@ -283,9 +261,8 @@ class BinaryPredictor(PredictionClient):
             api_url: Base URL of the prediction API
             auth_handler: Optional authentication handler
             endpoint: API endpoint path (default: "/upload")
-            converter: Format converter to convert API responses to COCO format
         """
-        super().__init__(api_url, auth_handler, converter)
+        super().__init__(api_url, auth_handler, BinaryFormatConverter())
         self.endpoint = endpoint
 
     def predict_from_file(

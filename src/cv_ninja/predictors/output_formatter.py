@@ -1,6 +1,7 @@
 """Convert predictions to various annotation formats."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
 
 
 class PredictionOutputFormatter:
@@ -9,6 +10,42 @@ class PredictionOutputFormatter:
     Integrates with existing BaseConverter pattern to support
     VOC, Label Studio, COCO, and other formats.
     """
+
+    @staticmethod
+    def _parse_filename_metadata(filename: str) -> Tuple[str, Optional[str], Optional[str]]:
+        """Parse filename to extract base name and optional metadata.
+
+        Parses filenames in the format: {REVIEW_LABEL}_{TARGET_CLASS}_rest_of_name.ext
+        where REVIEW_LABEL can be FN (False Negative) or FP (False Positive).
+
+        Args:
+            filename: Full filename or path
+
+        Returns:
+            Tuple of (basename, review_label, target_class)
+            - basename: Just the filename without path
+            - review_label: FN or FP if present, None otherwise
+            - target_class: Defect type if present, None otherwise
+
+        Examples:
+            "FN_jieba_image001.jpg" -> ("FN_jieba_image001.jpg", "FN", "jieba")
+            "FP_maobian_test.png" -> ("FP_maobian_test.png", "FP", "maobian")
+            "/path/to/image.jpg" -> ("image.jpg", None, None)
+        """
+        # Extract just the filename (no path)
+        basename = Path(filename).name
+
+        # Check if filename starts with FN_ or FP_
+        review_label = None
+        target_class = None
+
+        if basename.startswith("FN_") or basename.startswith("FP_"):
+            parts = basename.split("_")
+            if len(parts) >= 2:
+                review_label = parts[0]  # FN or FP
+                target_class = parts[1]  # defect type (jieba, maobian, etc.)
+
+        return basename, review_label, target_class
 
     @staticmethod
     def to_labelstudio(predictions: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
@@ -28,7 +65,10 @@ class PredictionOutputFormatter:
         image_info = predictions.get("images", [{}])[0]
         image_width = image_info.get("width", 4096)
         image_height = image_info.get("height", 3000)
-        image_name = image_info.get("file_name", "image.jpg")
+        image_path = image_info.get("file_name", "image.jpg")
+
+        # Parse filename metadata (extract basename, review_label, target_class)
+        image_name, review_label, target_class = PredictionOutputFormatter._parse_filename_metadata(image_path)
 
         # Create category mapping
         categories = {cat["id"]: cat["name"] for cat in predictions.get("categories", [])}
@@ -39,6 +79,7 @@ class PredictionOutputFormatter:
         for detection in predictions.get("annotations", []):
             x, y, w, h = detection["bbox"]
             category_name = categories.get(detection["category_id"], "unknown")
+            score = detection.get("score", 0.0)
 
             # Convert pixel coords to Label Studio percentage format
             x_percent = (x / image_width) * 100
@@ -60,15 +101,27 @@ class PredictionOutputFormatter:
                     },
                     "original_width": image_width,
                     "original_height": image_height,
+                    "meta": {
+                        "score": score  # Score as metadata for LabelStudio column
+                    }
                 }
             )
             labels.add(category_name)
 
+        # Build data dict with optional review metadata
+        data = {
+            "image": f'{prefix}{image_name}',
+            "label": ", ".join(sorted(labels)),
+        }
+
+        # Add review metadata if present in filename
+        if review_label:
+            data["review_label"] = review_label
+        if target_class:
+            data["target_class"] = target_class
+
         return {
-            "data": {
-                "image": f'{prefix}{image_name}',
-                "label": ", ".join(sorted(labels)),
-            },
+            "data": data,
             "annotations": [{"result": annotations}] if annotations else [],
         }
 
