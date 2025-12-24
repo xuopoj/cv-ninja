@@ -23,3 +23,21 @@ class FormatNotSupportedError(CVNinjaError):
     """Raised when an annotation format is not supported."""
 
     pass
+
+
+class PredictionError(CVNinjaError):
+    """Raised when prediction generation fails."""
+
+    pass
+
+
+class ModelError(CVNinjaError):
+    """Raised when model loading or validation fails."""
+
+    pass
+
+
+class HTTPError(CVNinjaError):
+    """Raised when HTTP request handling fails."""
+
+    pass

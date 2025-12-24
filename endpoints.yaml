@@ -1,0 +1,8 @@
+# CV-Ninja Endpoints Configuration
+# This file defines multiple endpoint profiles for testing and comparing different APIs
+# Credentials (username, password, API keys) should be stored in .env file
+
+endpoints:
+  prod_type0:
+    api_url: https://172.25.21.229:8001/v1/infers/3b0de836-87fd-4462-a766-ead0b2aa9acd
+    mode: formdata

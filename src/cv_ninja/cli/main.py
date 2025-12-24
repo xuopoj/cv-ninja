@@ -31,6 +31,21 @@ def convert():
 convert.add_command(commands.voc_to_labelstudio)
 
 
+@cli.group()
+def predict():
+    """Generate predictions using external CV model APIs.
+
+    Send images to trained computer vision models via HTTP APIs
+    and convert results to various annotation formats.
+    """
+    pass
+
+
+# Register prediction subcommands
+predict.add_command(commands.predict_image)
+predict.add_command(commands.predict_batch)
+
+
 # Placeholder for future command groups
 @cli.group()
 def split():

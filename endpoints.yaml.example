@@ -1,0 +1,55 @@
+# CV-Ninja Endpoints Configuration
+# This file defines multiple endpoint profiles for testing and comparing different APIs
+# Credentials (username, password, API keys) should be stored in .env file
+
+endpoints:
+  # Production endpoint with IAM authentication and binary upload
+  prod:
+    api_url: https://api.prod.example.com
+    mode: binary  # 'binary' or 'formdata'
+    endpoint: /upload
+    # IAM credentials will be loaded from .env (PREDICTION_IAM_URL, etc.)
+    # Override if needed:
+    # iam_url: https://iam.prod.example.com/v3/auth/tokens
+    # iam_domain: prod_domain
+    # iam_project: prod_project
+
+  # Test endpoint with API key authentication and form-data upload
+  test:
+    api_url: https://api.test.example.com/predict
+    mode: formdata
+    # API key will be loaded from .env (PREDICTION_API_KEY)
+
+  # Staging endpoint with IAM authentication
+  staging:
+    api_url: https://api.staging.example.com
+    mode: binary
+    endpoint: /upload
+    # Use specific IAM settings for staging
+    iam_url: https://iam.staging.example.com/v3/auth/tokens
+    iam_domain: staging_domain
+    iam_project: staging_project
+
+  # Local development endpoint
+  local:
+    api_url: http://localhost:5000
+    mode: binary
+    endpoint: /upload
+    # No authentication needed for local dev
+
+  # Alternative endpoint for comparison
+  alternative:
+    api_url: https://api.alternative.com/v2/predict
+    mode: formdata
+    # Uses credentials from .env
+
+# Configuration priority (highest to lowest):
+# 1. CLI options (--api-url, --iam-url, etc.)
+# 2. Profile settings (from this file)
+# 3. Environment variables (from .env)
+# 4. Default values
+
+# Usage examples:
+# cv-ninja predict image test.jpg --profile prod
+# cv-ninja predict batch ./images --profile test
+# cv-ninja predict image test.jpg --profile staging --verbose
