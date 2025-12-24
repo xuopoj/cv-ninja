@@ -15,8 +15,10 @@ def parse_voc_xml(xml_path):
     # Use actual XML filename instead of reading from XML content
     filename = Path(xml_path).stem + '.jpg'
     size = root.find('size')
-    width = int(size.find('width').text)
-    height = int(size.find('height').text)
+    width = 1516
+    height = 1386
+    # width = int(size.find('width').text)
+    # height = int(size.find('height').text)
 
     annotations = []
     for obj in root.findall('object'):
