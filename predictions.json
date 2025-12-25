@@ -1,37 +1,32 @@
-[
-  {
-    "data": {
-      "image": "original_datasets/dec/fn_jiaza/C32121_13_00016.jpg",
-      "label": "jieba"
-    },
-    "annotations": [
-      {
-        "result": [
-          {
-            "from_name": "label",
-            "to_name": "image",
-            "type": "rectanglelabels",
-            "value": {
-              "x": 49.169921875,
-              "y": 96.39999999999999,
-              "width": 2.1484375,
-              "height": 3.5333333333333337,
-              "rectanglelabels": [
-                "jieba"
-              ]
-            },
-            "original_width": 4096,
-            "original_height": 3000
-          }
-        ]
-      }
-    ]
+{
+  "data": {
+    "image": "/data/local-files/?d=orig/data_infer/FN_chongpi_C122913_03_00004.jpg",
+    "filename": "FN_jieja_C32121_13_00016.jpg",
+    "label": "jieba",
+    "review_label": "FN",
+    "target_class": "jieja"
   },
-  {
-    "data": {
-      "image": "original_datasets/dec/fn_jiaza/C32121_13_00017.jpg",
-      "label": ""
-    },
-    "annotations": []
-  }
-]
+  "annotations": [
+    {
+      "result": [
+        {
+          "from_name": "label",
+          "to_name": "image",
+          "type": "rectanglelabels",
+          "value": {
+            "x": 49.169921875,
+            "y": 96.39999999999999,
+            "width": 2.1484375,
+            "height": 3.5333333333333337,
+            "rectanglelabels": [
+              "jieba"
+            ]
+          },
+          "original_width": 4096,
+          "original_height": 3000,
+          "score": 0.712890625
+        }
+      ]
+    }
+  ]
+}

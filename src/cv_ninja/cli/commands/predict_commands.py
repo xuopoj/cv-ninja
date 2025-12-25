@@ -17,7 +17,7 @@ from PIL import Image
 def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password_cli, iam_domain_cli=None, iam_project_cli=None):
     """Create appropriate auth handler based on config and CLI options.
 
-    Precedence: CLI options > .env file > error
+    Precedence: CLI options > Profile auth_type > .env file
 
     Args:
         config: PredictionConfig instance
@@ -34,7 +34,10 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     Raises:
         click.UsageError: If invalid auth options provided
     """
-    # Get values with precedence: CLI > .env
+    # Check if profile specifies auth_type
+    auth_type = config.get_auth_type()
+
+    # Get values with precedence: CLI > Profile > .env
     api_key = config.get_api_key(api_key_cli)
     iam_url = config.get_iam_url(iam_url_cli)
     username = config.get_username(username_cli)
@@ -42,10 +45,64 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     iam_domain = config.get_iam_domain(iam_domain_cli)
     iam_project = config.get_iam_project(iam_project_cli)
 
+    # If CLI provides explicit auth, use it
+    if api_key_cli or iam_url_cli:
+        # CLI auth options override profile auth_type
+        if api_key_cli and iam_url_cli:
+            raise click.UsageError(
+                "Cannot use both --api-key and --iam-url options."
+            )
+
+        if api_key_cli:
+            return APIKeyAuth(api_key)
+
+        if iam_url_cli:
+            if not username or not password:
+                raise click.UsageError(
+                    "IAM authentication requires username and password. "
+                    "Provide --username and --password (or set in .env file)."
+                )
+            if not iam_domain or not iam_project:
+                raise click.UsageError(
+                    "IAM authentication requires domain and project. "
+                    "Provide --iam-domain and --iam-project (or set in .env file)."
+                )
+            return IAMTokenAuth(iam_url, username, password, iam_domain, iam_project)
+
+    # Use profile's auth_type if specified
+    if auth_type:
+        if auth_type == 'api_key':
+            if not api_key:
+                raise click.UsageError(
+                    "Profile specifies api_key auth but PREDICTION_API_KEY not set in .env"
+                )
+            return APIKeyAuth(api_key)
+
+        elif auth_type == 'iam':
+            if not iam_url:
+                raise click.UsageError(
+                    "Profile specifies iam auth but PREDICTION_IAM_URL not set in .env"
+                )
+            if not username or not password:
+                raise click.UsageError(
+                    "IAM authentication requires username and password in .env"
+                )
+            if not iam_domain or not iam_project:
+                raise click.UsageError(
+                    "IAM authentication requires domain and project in .env"
+                )
+            return IAMTokenAuth(iam_url, username, password, iam_domain, iam_project)
+
+        else:
+            raise click.UsageError(
+                f"Invalid auth_type '{auth_type}' in profile. Use 'api_key' or 'iam'."
+            )
+
+    # No profile auth_type - use old logic (error if both are set)
     if api_key and iam_url:
         raise click.UsageError(
             "Cannot use both API key and IAM authentication. "
-            "Use either --api-key or --iam-url (or set one in .env file)."
+            "Either set auth_type in profile config, or use only one auth method in .env"
         )
 
     if api_key:
@@ -164,6 +221,12 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     help="URL prefix for image paths in Label Studio format (e.g., /data/local-files/?d=)",
 )
 @click.option(
+    "--ls-mode",
+    type=click.Choice(["annotations", "predictions"]),
+    default="annotations",
+    help="Label Studio output mode: 'annotations' or 'predictions' (default: annotations)",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -190,6 +253,7 @@ def predict_image(
     profile,
     config_file,
     prefix,
+    ls_mode,
     verbose,
 ):
     """Predict objects in a single image using external API.
@@ -319,32 +383,23 @@ def predict_image(
                 # Direct prediction (returns COCO)
                 result = client.predict_from_file(image_path)
 
-        print(f"[DEBUG] CLI received result: {result}")
-        print(f"[DEBUG] Result type: {type(result)}")
-
         # Format output based on requested format
         formatter = PredictionOutputFormatter()
 
         if output_format == "labelstudio":
-            formatted = formatter.to_labelstudio(result, prefix=prefix)
-            print(f"[DEBUG] Formatted for LabelStudio: {formatted}")
+            formatted = formatter.to_labelstudio(result, prefix=prefix, output_mode=ls_mode)
             with open(output, "w") as f:
                 json.dump(formatted, f, indent=2)
-            print(f"[DEBUG] Wrote to {output}")
 
         elif output_format == "voc":
             formatted = formatter.to_voc(result, Path(image_path).name)
-            print(f"[DEBUG] Formatted for VOC: {formatted[:200]}...")
             with open(output, "w") as f:
                 f.write(formatted)
-            print(f"[DEBUG] Wrote to {output}")
 
         elif output_format == "coco":
             formatted = formatter.to_coco(result, image_id=1)
-            print(f"[DEBUG] Formatted for COCO: {formatted}")
             with open(output, "w") as f:
                 json.dump(formatted, f, indent=2)
-            print(f"[DEBUG] Wrote to {output}")
 
         click.echo(
             click.style(
@@ -474,6 +529,12 @@ def predict_image(
     help="URL prefix for image paths in Label Studio format (e.g., /data/local-files/?d=)",
 )
 @click.option(
+    "--ls-mode",
+    type=click.Choice(["annotations", "predictions"]),
+    default="annotations",
+    help="Label Studio output mode: 'annotations' or 'predictions' (default: annotations)",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -501,6 +562,7 @@ def predict_batch(
     profile,
     config_file,
     prefix,
+    ls_mode,
     verbose,
 ):
     """Predict objects in all images in a directory using external API.
@@ -637,7 +699,7 @@ def predict_batch(
             result["image_name"] = image_path.name
 
             if output_format == "labelstudio":
-                formatted = formatter.to_labelstudio(result, prefix=prefix)
+                formatted = formatter.to_labelstudio(result, prefix=prefix, output_mode=ls_mode)
                 all_results.append(formatted)
             elif output_format == "voc":
                 # For VOC, save individual XML files

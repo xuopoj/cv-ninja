@@ -4,14 +4,16 @@ import requests
 from typing import Any, Dict, Optional, Tuple
 from pathlib import Path
 from abc import ABC, abstractmethod
-import json
 
 from PIL import Image
 import io
+import urllib3
 
 from cv_ninja.predictors.auth import AuthHandler
 from cv_ninja.predictors.formats import FormatConverter, FormDataFormatConverter, BinaryFormatConverter
 
+# Disable all warnings from urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class PredictionClient(ABC):
@@ -225,10 +227,7 @@ class FormDataPredictor(PredictionClient):
 
         response.raise_for_status()
 
-        # Parse API response and add image dimensions
-        # {'dataset_id': '1377606572385112064', 'result': [{'RegisterMatrix': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}, {'Box': {'Angle': 0, 'Height': 154, 'Width': 45, 'X': 1148, 'Y': 689}, 'Score': 0.8662109375, 'label': 'jiaza'}]}
         result = response.json()
-        print(f"[DEBUG] API Response: {result}")
 
         # Ensure standardized format
         if 'image_width' not in result:
@@ -294,6 +293,7 @@ class BinaryPredictor(PredictionClient):
             image_data=image_data,
             params=params,
             image_id=image_id,
+            file_name=Path(image_path).name,
             **kwargs
         )
 
@@ -302,6 +302,7 @@ class BinaryPredictor(PredictionClient):
         image_data: bytes,
         params: Optional[Dict[str, Any]] = None,
         image_id: int = 1,
+        file_name: str = "",
         **kwargs
     ) -> Dict[str, Any]:
         """Send binary image data with query parameters.
@@ -310,6 +311,7 @@ class BinaryPredictor(PredictionClient):
             image_data: Raw image bytes
             params: Query parameters to send
             image_id: Image ID for COCO format (used when converter is set)
+            file_name: Optional file name for image entry
             **kwargs: Additional query parameters
 
         Returns:
@@ -318,6 +320,10 @@ class BinaryPredictor(PredictionClient):
         Raises:
             requests.RequestException: If API request fails
         """
+        # Get image dimensions from bytes
+        img = Image.open(io.BytesIO(image_data))
+        width, height = img.size
+
         # Combine params and kwargs
         query_params = {}
         if params:
@@ -344,9 +350,17 @@ class BinaryPredictor(PredictionClient):
         response.raise_for_status()
         result = response.json()
 
+        # example result {'result': 'success', 'suggestion': [[{'Box': {'x1': 3466, 'y1': 1990, 'x2': 3732, 'y2': 2326}, 'Class': 'jieba', 'Scores': 0.95458984375, 'Picture_id': '1'}]]}, total_time: 0.17780423164367676}
+
         # Convert to COCO format if converter is set
         if self.converter:
-            return self.converter.to_coco(result, image_id=image_id)
+            return self.converter.to_coco(
+                result,
+                image_id=image_id,
+                file_name=file_name,
+                image_width=width,
+                image_height=height
+            )
         return result
 
 

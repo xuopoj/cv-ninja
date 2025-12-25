@@ -159,7 +159,6 @@ class ImageTiler:
                 image_id=tile_info['tile_index'],
                 **predict_kwargs
             )
-            print(f"[DEBUG] Tile {tile_info['tile_index']} COCO prediction: {coco_data}")
 
             # Store with tile metadata
             tile_predictions.append({
@@ -174,7 +173,6 @@ class ImageTiler:
             original_size=image.size,
             iou_threshold=self.iou_threshold
         )
-        print(f"[DEBUG] Combined COCO format: {combined_coco}")
 
         return combined_coco
 

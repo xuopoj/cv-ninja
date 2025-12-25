@@ -26,7 +26,7 @@ class PredictionConfig:
 
         Args:
             env_file: Path to .env file (default: searches for .env in current dir and parents)
-            profile: Profile name to load from YAML config (e.g., 'prod', 'test')
+            profile: Profile name to load from YAML config (e.g., 'prod', 'test', or None for default)
             config_file: Path to YAML config file (default: cv-ninja.yaml or endpoints.yaml)
         """
         # Load .env file first (credentials)
@@ -38,6 +38,11 @@ class PredictionConfig:
 
         # Load profile from YAML config
         self.profile_config: Dict[str, Any] = {}
+
+        # If no profile specified, try to load default profile
+        if profile is None:
+            profile = self._get_default_profile(config_file)
+
         if profile:
             self.profile_config = self._load_profile(profile, config_file)
 
@@ -54,6 +59,34 @@ class PredictionConfig:
                 return env_path
             current = current.parent
         return None
+
+    def _get_default_profile(self, config_file: Optional[str] = None) -> Optional[str]:
+        """Get default profile name from YAML config.
+
+        Args:
+            config_file: Path to YAML config file (optional)
+
+        Returns:
+            Default profile name or None if not found
+        """
+        # Find config file
+        if config_file:
+            config_path = Path(config_file)
+        else:
+            config_path = self._find_config_file()
+
+        if not config_path or not config_path.exists():
+            return None
+
+        try:
+            # Load YAML
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+
+            # Return default profile if specified
+            return config_data.get('default')
+        except Exception:
+            return None
 
     def _find_config_file(self) -> Optional[Path]:
         """Find YAML config file in current directory or parents.

@@ -2,7 +2,11 @@
 # This file defines multiple endpoint profiles for testing and comparing different APIs
 # Credentials (username, password, API keys) should be stored in .env file
 
+# Default profile to use when --profile is not specified
+default: prod_type0
+
 endpoints:
   prod_type0:
     api_url: https://172.25.21.229:8001/v1/infers/3b0de836-87fd-4462-a766-ead0b2aa9acd
     mode: formdata
+    auth_type: iam  # Use IAM auth from .env

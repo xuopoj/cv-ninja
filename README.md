@@ -81,33 +81,46 @@ CV-Ninja 支持 **`.env` + `endpoints.yaml`** 混合配置，方便管理和测�
 **创建 `endpoints.yaml` 文件**：
 
 ```bash
-cp endpoints.yaml.example endpoints.yaml
+cp endpoints.example.yaml endpoints.yaml
 ```
 
 `endpoints.yaml` 示例：
 
 ```yaml
+# 默认 profile（不指定 --profile 时使用）
+default: prod
+
 endpoints:
   prod:
     api_url: https://api.prod.example.com
+    auth_type: iam  # 指定使用 IAM 认证（从 .env 读取凭证）
     mode: binary
     endpoint: /upload
-    iam_url: https://iam.prod.example.com/v3/auth/tokens
 
   test:
     api_url: https://api.test.example.com/predict
+    auth_type: api_key  # 指定使用 API Key 认证（从 .env 读取）
     mode: formdata
 
   local:
     api_url: http://localhost:5000
+    auth_type: iam
     mode: binary
     endpoint: /upload
 ```
 
+**重要特性**：
+- `default`: 指定默认 profile，无需每次指定 `--profile`
+- `auth_type`: 每个 endpoint 可以指定不同的认证方式（`iam` 或 `api_key`）
+- 凭证统一在 `.env` 中管理，`endpoints.yaml` 只指定使用哪种认证方式
+
 **使用方式**：
 
 ```bash
-# 使用 prod profile
+# 使用默认 profile（无需指定 --profile）
+cv-ninja predict image test.jpg
+
+# 显式使用 prod profile
 cv-ninja predict image test.jpg --profile prod
 
 # 切换到 test profile
@@ -120,6 +133,8 @@ cv-ninja predict image test.jpg --profile prod --api-url https://override.com
 **优点**：
 - 凭证（用户名/密码）集中在 `.env`（不提交到 git）
 - Endpoint 配置在 YAML（可以提交到 git）
+- 支持默认 profile，无需每次指定
+- 每个 endpoint 可以使用不同的认证方式（通过 `auth_type` 指定）
 - 快速切换不同 endpoint 进行对比测试
 
 ## 使用方法
@@ -178,12 +193,27 @@ cv-ninja predict image path/to/image.jpg \
 **使用 Profile 配置：**
 
 ```bash
+# 使用默认 profile（在 endpoints.yaml 中配置）
+cv-ninja predict image path/to/image.jpg
+
 # 使用预定义的 endpoint 配置
 cv-ninja predict image path/to/image.jpg --profile prod
 
 # 在不同 endpoint 之间快速切换进行测试
 cv-ninja predict image path/to/image.jpg --profile test
 cv-ninja predict image path/to/image.jpg --profile staging
+```
+
+**Label Studio 输出模式：**
+
+```bash
+# 输出为 annotations 格式（默认）
+cv-ninja predict image path/to/image.jpg --ls-mode annotations
+
+# 输出为 predictions 格式
+cv-ninja predict image path/to/image.jpg --ls-mode predictions
+
+# 两种模式都支持显示 score（置信度）
 ```
 
 **大图自动切分（Tiling）：**
@@ -270,6 +300,15 @@ cv-ninja predict batch ./images -v
 - `--tile`: 启用自动图片切分（适合超过 1386x1516 的大图）
 - `--tile-size`: 切分尺寸，格式 WIDTHxHEIGHT（默认 1386x1516）
 - `--tile-overlap`: 切片重叠像素数（默认 32px，用于边界目标检测）
+
+**Label Studio 输出参数：**
+- `--ls-mode`: Label Studio 输出模式，可选 `annotations` 或 `predictions`（默认 `annotations`）
+- `--prefix`: 图片路径前缀（如 `/data/local-files/?d=`）
+
+**输出格式说明：**
+- `annotations` 模式：输出为人工标注格式，支持显示 score
+- `predictions` 模式：输出为模型预测格式，支持显示 score
+- 输出包含 `filename` 字段，便于在 Label Studio 中筛选和搜索
 
 ### 大图切分处理
 

@@ -48,7 +48,7 @@ class PredictionOutputFormatter:
         return basename, review_label, target_class
 
     @staticmethod
-    def to_labelstudio(predictions: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
+    def to_labelstudio(predictions: Dict[str, Any], prefix: str = "", output_mode: str = "annotations") -> Dict[str, Any]:
         """Convert predictions to Label Studio format.
 
         Args:
@@ -57,9 +57,10 @@ class PredictionOutputFormatter:
                 - annotations: List of detection annotations
                 - categories: List of category definitions
             prefix: URL prefix for image path
+            output_mode: Use 'annotations' or 'predictions' field (default: 'annotations')
 
         Returns:
-            Label Studio task object with annotations
+            Label Studio task object with annotations or predictions
         """
         # Extract image info
         image_info = predictions.get("images", [{}])[0]
@@ -101,9 +102,7 @@ class PredictionOutputFormatter:
                     },
                     "original_width": image_width,
                     "original_height": image_height,
-                    "meta": {
-                        "score": score  # Score as metadata for LabelStudio column
-                    }
+                    "score": score
                 }
             )
             labels.add(category_name)
@@ -111,6 +110,7 @@ class PredictionOutputFormatter:
         # Build data dict with optional review metadata
         data = {
             "image": f'{prefix}{image_name}',
+            "filename": image_name,
             "label": ", ".join(sorted(labels)),
         }
 
@@ -120,10 +120,17 @@ class PredictionOutputFormatter:
         if target_class:
             data["target_class"] = target_class
 
-        return {
+        result_data = {
             "data": data,
-            "annotations": [{"result": annotations}] if annotations else [],
         }
+
+        # Use annotations or predictions based on output_mode
+        if output_mode == "predictions":
+            result_data["predictions"] = [{"result": annotations}] if annotations else []
+        else:
+            result_data["annotations"] = [{"result": annotations}] if annotations else []
+
+        return result_data
 
     @staticmethod
     def to_voc(predictions: Dict[str, Any], image_name: str) -> str:

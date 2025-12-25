@@ -1,0 +1,37 @@
+# CV-Ninja Endpoints Configuration Example
+# Copy this file to endpoints.yaml and customize for your endpoints
+# Credentials (username, password, API keys) should be stored in .env file
+
+# Default profile to use when --profile is not specified
+default: prod
+
+endpoints:
+  # Production endpoint using IAM authentication
+  prod:
+    api_url: https://api.example.com/predict
+    auth_type: iam  # Use IAM credentials from .env
+    mode: binary
+    endpoint: /upload
+
+  # Test endpoint using API key authentication
+  test:
+    api_url: https://test-api.example.com/predict
+    auth_type: api_key  # Use API key from .env
+    mode: formdata
+
+  # Staging endpoint
+  staging:
+    api_url: https://staging-api.example.com/predict
+    auth_type: iam
+    mode: binary
+    endpoint: /upload
+    iam_domain: your_domain
+    iam_project: your_project
+
+# Configuration options:
+#   api_url: Full URL to the prediction API endpoint
+#   auth_type: 'iam' or 'api_key' - which auth method to use from .env
+#   mode: 'binary' or 'formdata' - how to send image data
+#   endpoint: API endpoint path (for binary mode, default: /upload)
+#   iam_domain: IAM domain (optional, can override .env)
+#   iam_project: IAM project (optional, can override .env)
