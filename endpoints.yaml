@@ -3,10 +3,14 @@
 # Credentials (username, password, API keys) should be stored in .env file
 
 # Default profile to use when --profile is not specified
-default: prod_type0
+default: prod_type1
 
 endpoints:
   prod_type0:
     api_url: https://172.25.21.229:8001/v1/infers/3b0de836-87fd-4462-a766-ead0b2aa9acd
     mode: formdata
+    auth_type: iam  # Use IAM auth from .env
+  prod_type1:
+    api_url: http://191.168.163.232:35600/096254c4-e5d4-469f-9735-1c498dd68afa/
+    mode: binary
     auth_type: iam  # Use IAM auth from .env

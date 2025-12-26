@@ -541,6 +541,65 @@ CV-Ninja 使用 **COCO 格式**作为内部标准交换格式，确保不同 API
 }
 ```
 
+### API 响应格式示例
+
+不同的 API 端点可能返回不同格式的预测结果。以下是常见的 API 响应格式示例：
+
+#### MA模型 API 响应格式
+
+```json
+{
+  "dataset_id": "1377606572385112064",
+  "result": [
+    {
+      "RegisterMatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    },
+    {
+      "Box": {
+        "X": 1148,
+        "Y": 689,
+        "Width": 45,
+        "Height": 154,
+        "Angle": 0
+      },
+      "Score": 0.8662109375,
+      "label": "jiaza"
+    }
+  ],
+  "image_width": 1920,
+  "image_height": 1080
+}
+```
+
+#### 算法包 API 响应格式
+
+```json
+{
+  "result": "success",
+  "suggestion": [
+    [
+      {
+        "Box": {
+          "x1": 3466,
+          "y1": 1990,
+          "x2": 3732,
+          "y2": 2326
+        },
+        "Class": "jieba",
+        "Scores": 0.95458984375,
+        "Picture_id": "1"
+      }
+    ]
+  ],
+  "total_time": 0.17780423164367676
+}
+```
+
+**说明：**
+- FormData 格式使用 `X, Y, Width, Height` 表示边界框
+- Binary 格式使用 `x1, y1, x2, y2` 表示边界框
+- 所有格式会被 FormatConverter 转换为统一的 COCO 格式进行处理
+
 ### 使用格式转换器
 
 ```python

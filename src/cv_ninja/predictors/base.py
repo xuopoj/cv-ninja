@@ -199,21 +199,6 @@ class FormDataPredictor(PredictionClient):
             **kwargs
         }
 
-        # Debug: return mock data with proper metadata
-        # debug_result = {
-        #     'dataset_id': '1377606572385112064',
-        #     'result': [
-        #         {'RegisterMatrix': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]},
-        #         {
-        #             'Box': {'Angle': 0, 'Height': 154, 'Width': 45, 'X': 1148, 'Y': 689},
-        #             'Score': 0.8662109375,
-        #             'label': 'jiaza'
-        #         }
-        #     ],
-        #     'image_width': image_width,
-        #     'image_height': image_height
-        # }
-        # return debug_result
         headers = self._get_auth_headers()
 
         response = self.session.post(
@@ -349,8 +334,6 @@ class BinaryPredictor(PredictionClient):
 
         response.raise_for_status()
         result = response.json()
-
-        # example result {'result': 'success', 'suggestion': [[{'Box': {'x1': 3466, 'y1': 1990, 'x2': 3732, 'y2': 2326}, 'Class': 'jieba', 'Scores': 0.95458984375, 'Picture_id': '1'}]]}, total_time: 0.17780423164367676}
 
         # Convert to COCO format if converter is set
         if self.converter:

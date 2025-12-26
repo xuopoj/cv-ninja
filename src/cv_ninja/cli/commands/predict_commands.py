@@ -185,9 +185,9 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     help="Query parameters for binary mode as JSON (e.g., '{\"Station_id\": \"123\"}')",
 )
 @click.option(
-    "--tile",
-    is_flag=True,
-    help="Enable automatic tiling for large images (>1386x1516)",
+    "--tiling/--no-tiling",
+    default=True,
+    help="Enable/disable automatic tiling for large images (some APIs handle tiling internally)",
 )
 @click.option(
     "--tile-size",
@@ -246,7 +246,7 @@ def predict_image(
     binary,
     endpoint,
     params,
-    tile,
+    tiling,
     tile_size,
     tile_overlap,
     env_file,
@@ -330,7 +330,7 @@ def predict_image(
                     f"Invalid tile size format: {tile_size}. Use WIDTHxHEIGHT (e.g., 1386x1516)"
                 )
 
-        if verbose and tile:
+        if verbose and tiling:
             click.echo(f"Tiling enabled: {tile_width}x{tile_height} with {tile_overlap}px overlap")
 
         # Create appropriate predictor based on mode
@@ -354,7 +354,7 @@ def predict_image(
             img = Image.open(image_path)
             tiler = ImageTiler(tile_size=(tile_width, tile_height), overlap=tile_overlap)
 
-            if tile and tiler.needs_tiling(img):
+            if tiling and tiler.needs_tiling(img):
                 if verbose:
                     click.echo(f"Image requires tiling: {img.size[0]}x{img.size[1]}")
                 # Use tiler to orchestrate prediction (returns COCO)
@@ -374,7 +374,7 @@ def predict_image(
             img = Image.open(image_path)
             tiler = ImageTiler(tile_size=(tile_width, tile_height), overlap=tile_overlap)
 
-            if tile and tiler.needs_tiling(img):
+            if tiling and tiler.needs_tiling(img):
                 if verbose:
                     click.echo(f"Image requires tiling: {img.size[0]}x{img.size[1]}")
                 # Use tiler to orchestrate prediction (returns COCO)
@@ -493,9 +493,9 @@ def predict_image(
     help="Query parameters for binary mode as JSON (e.g., '{\"Station_id\": \"123\"}')",
 )
 @click.option(
-    "--tile",
-    is_flag=True,
-    help="Enable automatic tiling for large images (>1386x1516)",
+    "--tiling/--no-tiling",
+    default=True,
+    help="Enable/disable automatic tiling for large images (some APIs handle tiling internally)",
 )
 @click.option(
     "--tile-size",
@@ -555,7 +555,7 @@ def predict_batch(
     binary,
     endpoint,
     params,
-    tile,
+    tiling,
     tile_size,
     tile_overlap,
     env_file,
@@ -649,7 +649,7 @@ def predict_batch(
                     f"Invalid tile size format: {tile_size}. Use WIDTHxHEIGHT (e.g., 1386x1516)"
                 )
 
-        if verbose and tile:
+        if verbose and tiling:
             click.echo(f"Tiling enabled: {tile_width}x{tile_height} with {tile_overlap}px overlap")
 
         # Parse params if provided (for binary mode)
@@ -667,7 +667,7 @@ def predict_batch(
             client = FormDataPredictor(api_url, auth_handler)
 
         # Create tiler if tiling is enabled
-        tiler = ImageTiler(tile_size=(tile_width, tile_height), overlap=tile_overlap) if tile else None
+        tiler = ImageTiler(tile_size=(tile_width, tile_height), overlap=tile_overlap) if tiling else None
 
         # Process all images
         all_results = []
@@ -681,7 +681,7 @@ def predict_batch(
             img = Image.open(image_path)
 
             # Determine if we should use tiling
-            if tile and tiler and tiler.needs_tiling(img):
+            if tiling and tiler and tiler.needs_tiling(img):
                 if verbose:
                     click.echo(f"  Image requires tiling: {img.size[0]}x{img.size[1]}")
                 # Use tiler to orchestrate prediction (returns COCO)
