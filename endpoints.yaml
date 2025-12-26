@@ -11,6 +11,6 @@ endpoints:
     mode: formdata
     auth_type: iam  # Use IAM auth from .env
   prod_type1:
-    api_url: http://191.168.163.232:35600/096254c4-e5d4-469f-9735-1c498dd68afa/
+    api_url: http://191.168.163.232:35600/096254c4-e5d4-469f-9735-1c498dd68afa/upload
     mode: binary
     auth_type: iam  # Use IAM auth from .env

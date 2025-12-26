@@ -176,11 +176,6 @@ def create_auth_handler(config, api_key_cli, iam_url_cli, username_cli, password
     help="Use binary upload mode (raw binary data instead of multipart form)",
 )
 @click.option(
-    "--endpoint",
-    default="/upload",
-    help="API endpoint path for binary mode (default: /upload)",
-)
-@click.option(
     "--params",
     help="Query parameters for binary mode as JSON (e.g., '{\"Station_id\": \"123\"}')",
 )
@@ -244,7 +239,6 @@ def predict_image(
     iam_domain,
     iam_project,
     binary,
-    endpoint,
     params,
     tiling,
     tile_size,
@@ -314,10 +308,6 @@ def predict_image(
         # Determine mode: CLI flag > profile config > default (formdata)
         use_binary = binary or config.get_mode() == 'binary'
 
-        # Get endpoint from profile if not specified
-        if use_binary and not endpoint:
-            endpoint = config.get_endpoint() or "/upload"
-
         # Parse tile size
         tile_width, tile_height = 1386, 1516
         if tile_size:
@@ -345,10 +335,10 @@ def predict_image(
 
             if verbose:
                 click.echo("Sending request to API...")
-                click.echo(f"Using binary upload mode (endpoint: {endpoint})")
+                click.echo("Using binary upload mode")
 
             # Create predictor (has built-in converter, returns COCO)
-            client = BinaryPredictor(api_url, auth_handler, endpoint=endpoint)
+            client = BinaryPredictor(api_url, auth_handler)
 
             # Check if tiling is needed
             img = Image.open(image_path)
@@ -358,7 +348,7 @@ def predict_image(
                 if verbose:
                     click.echo(f"Image requires tiling: {img.size[0]}x{img.size[1]}")
                 # Use tiler to orchestrate prediction (returns COCO)
-                result = tiler.predict_tiled(client, img, params=query_params)
+                result = tiler.predict_tiled(client, img, file_name=Path(image_path).name, params=query_params)
             else:
                 # Direct prediction (returns COCO)
                 result = client.predict_from_file(image_path, params=query_params)
@@ -378,7 +368,7 @@ def predict_image(
                 if verbose:
                     click.echo(f"Image requires tiling: {img.size[0]}x{img.size[1]}")
                 # Use tiler to orchestrate prediction (returns COCO)
-                result = tiler.predict_tiled(client, img)
+                result = tiler.predict_tiled(client, img, file_name=Path(image_path).name)
             else:
                 # Direct prediction (returns COCO)
                 result = client.predict_from_file(image_path)
@@ -387,6 +377,7 @@ def predict_image(
         formatter = PredictionOutputFormatter()
 
         if output_format == "labelstudio":
+            print(result)
             formatted = formatter.to_labelstudio(result, prefix=prefix, output_mode=ls_mode)
             with open(output, "w") as f:
                 json.dump(formatted, f, indent=2)
@@ -484,11 +475,6 @@ def predict_image(
     help="Use binary upload mode (raw binary data instead of multipart form)",
 )
 @click.option(
-    "--endpoint",
-    default="/upload",
-    help="API endpoint path for binary mode (default: /upload)",
-)
-@click.option(
     "--params",
     help="Query parameters for binary mode as JSON (e.g., '{\"Station_id\": \"123\"}')",
 )
@@ -553,7 +539,6 @@ def predict_batch(
     iam_domain,
     iam_project,
     binary,
-    endpoint,
     params,
     tiling,
     tile_size,
@@ -633,10 +618,6 @@ def predict_batch(
         # Determine mode: CLI flag > profile config > default (formdata)
         use_binary = binary or config.get_mode() == 'binary'
 
-        # Get endpoint from profile if not specified
-        if use_binary and not endpoint:
-            endpoint = config.get_endpoint() or "/upload"
-
         # Parse tile size
         tile_width, tile_height = 1386, 1516
         if tile_size:
@@ -662,7 +643,7 @@ def predict_batch(
 
         # Create appropriate predictor based on mode (has built-in converter, returns COCO)
         if use_binary:
-            client = BinaryPredictor(api_url, auth_handler, endpoint=endpoint)
+            client = BinaryPredictor(api_url, auth_handler)
         else:
             client = FormDataPredictor(api_url, auth_handler)
 
@@ -686,9 +667,9 @@ def predict_batch(
                     click.echo(f"  Image requires tiling: {img.size[0]}x{img.size[1]}")
                 # Use tiler to orchestrate prediction (returns COCO)
                 if use_binary:
-                    result = tiler.predict_tiled(client, img, params=query_params)
+                    result = tiler.predict_tiled(client, img, file_name=image_path.name, params=query_params)
                 else:
-                    result = tiler.predict_tiled(client, img)
+                    result = tiler.predict_tiled(client, img, file_name=image_path.name)
             else:
                 # Direct prediction (returns COCO)
                 if use_binary:

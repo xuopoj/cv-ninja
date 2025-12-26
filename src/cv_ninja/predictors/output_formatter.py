@@ -69,8 +69,9 @@ class PredictionOutputFormatter:
         image_path = image_info.get("file_name", "image.jpg")
 
         # Parse filename metadata (extract basename, review_label, target_class)
+        print(image_path)
         image_name, review_label, target_class = PredictionOutputFormatter._parse_filename_metadata(image_path)
-
+        print(image_name, review_label)
         # Create category mapping
         categories = {cat["id"]: cat["name"] for cat in predictions.get("categories", [])}
 

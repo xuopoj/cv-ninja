@@ -236,18 +236,15 @@ class BinaryPredictor(PredictionClient):
     def __init__(
         self,
         api_url: str,
-        auth_handler: Optional[AuthHandler] = None,
-        endpoint: str = "/upload"
+        auth_handler: Optional[AuthHandler] = None
     ):
         """Initialize binary predictor.
 
         Args:
-            api_url: Base URL of the prediction API
+            api_url: Complete URL of the prediction API
             auth_handler: Optional authentication handler
-            endpoint: API endpoint path (default: "/upload")
         """
         super().__init__(api_url, auth_handler, BinaryFormatConverter())
-        self.endpoint = endpoint
 
     def predict_from_file(
         self,
@@ -321,11 +318,8 @@ class BinaryPredictor(PredictionClient):
         }
         headers.update(self._get_auth_headers())
 
-        # Construct full URL with endpoint
-        url = self.api_url.rstrip('/') + '/' + self.endpoint.lstrip('/')
-
         response = self.session.post(
-            url,
+            self.api_url,
             data=image_data,
             params=query_params,
             headers=headers,

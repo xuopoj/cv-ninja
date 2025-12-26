@@ -127,6 +127,7 @@ class ImageTiler:
         self,
         predictor: Any,  # PredictionClient instance (must return COCO format)
         image: Image.Image,
+        file_name: str = "",
         **predict_kwargs
     ) -> Dict[str, Any]:
         """Predict on large image using tiling.
@@ -140,6 +141,7 @@ class ImageTiler:
         Args:
             predictor: PredictionClient instance (must have converter set to return COCO)
             image: PIL Image to process
+            file_name: Optional filename to include in result
             **predict_kwargs: Keyword arguments to pass to predictor.predict_from_bytes()
 
         Returns:
@@ -171,7 +173,8 @@ class ImageTiler:
         combined_coco = self.combine_predictions(
             tile_predictions,
             original_size=image.size,
-            iou_threshold=self.iou_threshold
+            iou_threshold=self.iou_threshold,
+            file_name=file_name
         )
 
         return combined_coco
@@ -180,7 +183,8 @@ class ImageTiler:
         self,
         tile_predictions: List[Dict[str, Any]],
         original_size: Tuple[int, int],
-        iou_threshold: float = 0.5
+        iou_threshold: float = 0.5,
+        file_name: str = ""
     ) -> Dict[str, Any]:
         """Combine predictions from multiple tiles into single result.
 
@@ -195,6 +199,7 @@ class ImageTiler:
             tile_predictions: List of COCO format predictions with tile metadata
             original_size: Original image size (width, height)
             iou_threshold: IoU threshold for NMS (default: 0.5)
+            file_name: Optional filename to include in result
 
         Returns:
             Combined COCO format prediction result
@@ -270,7 +275,7 @@ class ImageTiler:
                 'id': 1,
                 'width': original_size[0],
                 'height': original_size[1],
-                'file_name': ''
+                'file_name': file_name
             }],
             'annotations': all_annotations,
             'categories': category_list,
