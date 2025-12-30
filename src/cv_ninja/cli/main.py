@@ -29,6 +29,7 @@ def convert():
 
 # Register conversion subcommands
 convert.add_command(commands.voc_to_labelstudio)
+convert.add_command(commands.labelme_to_labelstudio)
 
 
 @cli.group()

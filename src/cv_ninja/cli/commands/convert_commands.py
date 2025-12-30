@@ -3,6 +3,7 @@
 import click
 
 from cv_ninja.converters.voc_to_labelstudio import VOCToLabelStudioConverter
+from cv_ninja.converters.labelme_to_labelstudio import LabelMeToLabelStudioConverter
 from cv_ninja.utils.exceptions import ConversionError, ValidationError
 
 
@@ -73,6 +74,107 @@ def voc_to_labelstudio(input_dir, output, prefix, image_dir, verbose):
                 click.echo(f"Reading dimensions from XML files")
 
         converter = VOCToLabelStudioConverter(prefix=prefix, image_dir=image_dir)
+        converter.convert(input_dir, output)
+
+        # Count tasks in output
+        import json
+        from pathlib import Path
+
+        if Path(output).exists():
+            with open(output) as f:
+                tasks = json.load(f)
+                task_count = len(tasks)
+        else:
+            task_count = 0
+
+        click.echo(
+            click.style(
+                f"✓ Successfully converted {task_count} tasks to {output}",
+                fg='green'
+            )
+        )
+
+        if verbose:
+            click.echo(f"Conversion completed!")
+
+    except ValidationError as e:
+        click.echo(
+            click.style(f"✗ Validation error: {e}", fg='red'),
+            err=True
+        )
+        raise click.Abort()
+
+    except ConversionError as e:
+        click.echo(
+            click.style(f"✗ Conversion error: {e}", fg='red'),
+            err=True
+        )
+        raise click.Abort()
+
+    except Exception as e:
+        click.echo(
+            click.style(f"✗ Unexpected error: {e}", fg='red'),
+            err=True
+        )
+        if verbose:
+            raise
+        raise click.Abort()
+
+
+@click.command('labelme-to-labelstudio')
+@click.argument('input_dir', type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.option(
+    '-o', '--output',
+    default='labelstudio.json',
+    type=click.Path(),
+    help='Output JSON file path (default: labelstudio.json)'
+)
+@click.option(
+    '-p', '--prefix',
+    default='',
+    help='URL prefix for image paths (e.g., /data/images/)'
+)
+@click.option(
+    '-v', '--verbose',
+    is_flag=True,
+    help='Enable verbose output'
+)
+def labelme_to_labelstudio(input_dir, output, prefix, verbose):
+    """Convert LabelMe annotations to Label Studio JSON format.
+
+    Converts all JSON annotation files in INPUT_DIR from LabelMe format
+    to Label Studio's JSON format with bounding box and polygon annotations.
+
+    \b
+    INPUT_DIR: Directory containing LabelMe JSON annotation files
+
+    \b
+    Examples:
+        # Basic conversion
+        cv-ninja convert labelme-to-labelstudio dataset/labelme
+
+        # Specify output file
+        cv-ninja convert labelme-to-labelstudio dataset/labelme -o output.json
+
+        # Add URL prefix for images
+        cv-ninja convert labelme-to-labelstudio dataset/labelme \\
+            -o output.json \\
+            -p "/data/local-files/?d=images/"
+
+        # Complete example with all options
+        cv-ninja convert labelme-to-labelstudio dataset/labelme \\
+            -o labelstudio_output.json \\
+            -p "/data/images/" \\
+            -v
+    """
+    try:
+        if verbose:
+            click.echo(f"Converting LabelMe annotations from: {input_dir}")
+            click.echo(f"Output file: {output}")
+            if prefix:
+                click.echo(f"Image URL prefix: {prefix}")
+
+        converter = LabelMeToLabelStudioConverter(prefix=prefix)
         converter.convert(input_dir, output)
 
         # Count tasks in output
